@@ -1,0 +1,11 @@
+[Protocol]
+exec=neutron-qt '%u'
+protocol=neutron
+input=none
+output=none
+helper=true
+listing=
+reading=false
+writing=false
+makedir=false
+deleting=false

@@ -1,0 +1,12 @@
+[submodule "src/leveldb"]
+	path = src/leveldb
+	url = https://github.com/google/leveldb.git
+[submodule "src/robin-hood-hashing"]
+	path = src/robin-hood-hashing
+	url = https://github.com/martinus/robin-hood-hashing.git
+[submodule "src/jemalloc"]
+	path = src/jemalloc
+	url = https://github.com/jemalloc/jemalloc.git
+[submodule "src/univalue"]
+	path = src/univalue
+	url = https://github.com/jgarzik/univalue.git

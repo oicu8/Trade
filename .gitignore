@@ -1,0 +1,38 @@
+/dist/
+src/*.exe
+src/neutrond
+src/test_neutron
+.*.swp
+*.*~*
+*.bak
+*.rej
+*.orig
+*.o
+*.d
+*.patch
+.neutron
+.qmake.stash
+
+# Compilation and Qt preprocessor part
+*.qm
+*.app
+Makefile
+Neutron-qt
+Neutron-qt.app
+Neutron-qt.dmg
+
+# Unit-tests
+Makefile.test
+neutron-qt_test
+
+# Resources cpp
+qrc_*.cpp
+
+# Qt creator
+*.pro.user*
+
+# Mac specific
+.DS_Store
+build
+
+!src/leveldb-*/Makefile

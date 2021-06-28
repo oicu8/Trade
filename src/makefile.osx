@@ -1,0 +1,221 @@
+# -*- mode: Makefile; -*-
+# Copyright (c) 2011 Bitcoin Developers
+# Distributed under the MIT/X11 software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+# Mac OS X makefile for Neutron
+
+CXX=llvm-g++
+
+#DEPSDIR=/usr/local/opt
+#BOOST_LIB_PATH = /usr/local/Cellar/boost/1.58.0/lib
+#BOOST_INCLUDE_PATH = /usr/local/Cellar/boost/1.58.0/include
+#BDB_LIB_PATH = $(DEPSDIR)/berkeley-db@4/lib
+#BDB_INCLUDE_PATH = $(DEPSDIR)/berkeley-db@4/include
+#MINIUPNPC_LIB_PATH = /usr/local/Cellar/miniupnpc/2.0.20170509/lib
+#MINIUPNPC_INCLUDE_PATH = /usr/local/Cellar/miniupnpc/2.0.20170509/include
+#OPENSSL_LIB_PATH = /usr/local/Cellar/openssl/1.0.2k/lib
+#OPENSSL_INCLUDE_PATH = /usr/local/Cellar/openssl/1.0.2k/include
+
+INCLUDEPATHS= \
+ -I"$(CURDIR)" \
+ -I"$(CURDIR)/obj" \
+ -I"$(BOOST_INCLUDE_PATH)" \
+ -I"$(BDB_INCLUDE_PATH)" \
+ -I"$(MINIUPNPC_INCLUDE_PATH)" \
+ -I"$(OPENSSL_INCLUDE_PATH)"
+
+LIBPATHS= \
+ -L"$(BOOST_LIB_PATH)" \
+ -L"$(BDB_LIB_PATH)" \
+ -L"$(MINIUPNPC_LIB_PATH)" \
+ -L"$(OPENSSL_LIB_PATH)"
+
+USE_UPNP:=1
+
+ifndef ENABLE_WALLET
+    override ENABLE_WALLET = 1
+endif
+ifneq (${ENABLE_WALLET}, 0)
+    $(info Wallet enabled)
+    DEFS += -DENABLE_WALLET
+else
+    $(info Wallet disabled)
+endif
+
+LIBS= -dead_strip
+
+ifdef STATIC
+# Build STATIC if you are redistributing the neutrond binary
+$(info Using static linking)
+# $(info $$var is [${var}])
+LIBS += \
+ $(BDB_LIB_PATH)/libdb_cxx-4.8.a \
+ $(BOOST_LIB_PATH)/libboost_system-mt.a \
+ $(BOOST_LIB_PATH)/libboost_filesystem-mt.a \
+ $(BOOST_LIB_PATH)/libboost_program_options-mt.a \
+ $(BOOST_LIB_PATH)/libboost_thread-mt.a \
+ $(BOOST_LIB_PATH)/libboost_chrono-mt.a \
+ $(OPENSSL_LIB_PATH)/libssl.a \
+ $(OPENSSL_LIB_PATH)/libcrypto.a
+else
+$(info Using dynamic linking)
+LIBS += \
+ -ldb_cxx-4.8 \
+ -lboost_system-mt \
+ -lboost_filesystem-mt \
+ -lboost_program_options-mt \
+ -lboost_thread-mt \
+ -lboost_chrono-mt \
+ -lssl \
+ -lcrypto \
+ -lz
+endif
+
+DEFS += -DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE -D__USE_MINGW_ANSI_STDIO
+
+ifdef RELEASE
+# Compile for maximum compatibility and smallest size.
+# This requires that dependencies are compiled
+# the same way.
+CFLAGS = -mmacosx-version-min=10.10 -arch x86_64 -O3 -msse2
+else
+CFLAGS = -g -msse2
+endif
+
+CFLAGS += -stdlib=libc++ -std=c++11 -Wall -Wextra -Wno-unused-local-typedefs -Wformat -Wformat-security -Wno-unused-parameter \
+    $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
+
+OBJS= \
+    obj/activemasternode.o \
+    obj/addrdb.o \
+    obj/addrman.o \
+    obj/alert.o \
+    obj/backtrace.o \
+    obj/bitcoinrpc.o \
+    obj/checkpoints.o \
+    obj/clientversion.o \
+    obj/crypter.o \
+    obj/darksend.o \
+    obj/db.o \
+    obj/init.o \
+    obj/ismine.o \
+    obj/kernel.o \
+    obj/key.o \
+    obj/keystore.o \
+    obj/miner.o \
+    obj/main.o \
+    obj/masternode.o \
+    obj/masternodeconfig.o \
+    obj/net.o \
+    obj/netaddress.o \
+    obj/netaddress.o \
+    obj/netbase.o \
+    obj/noui.o \
+    obj/pbkdf2.o \
+    obj/protocol.o \
+    obj/random.o \
+    obj/rpcdump.o \
+    obj/rpcnet.o \
+    obj/rpcmining.o \
+    obj/rpcwallet.o \
+    obj/rpcblockchain.o \
+    obj/rpcdarksend.o \
+    obj/rpcrawtransaction.o \
+    obj/scheduler.o \
+    obj/script.o \
+    obj/scrypt.o \
+    obj/scrypt-arm.o \
+    obj/scrypt-x86.o \
+    obj/scrypt-x86_64.o \
+    obj/spork.o \
+    obj/sync.o \
+    obj/threadinterrupt.o \
+    obj/timedata.o \
+    obj/txmempool.o \
+    obj/ui_interface.o \
+    obj/util.o \
+    obj/utilmoneystr.o \
+    obj/utilstrencodings.o \
+    obj/utiltime.o \
+    obj/validation.o \
+    obj/wallet.o \
+    obj/walletdb.o
+
+ifndef USE_UPNP
+	override USE_UPNP = -
+endif
+ifneq (${USE_UPNP}, -)
+	DEFS += -DUSE_UPNP=$(USE_UPNP)
+ifdef STATIC
+	LIBS += $(MINIUPNPC_LIB_PATH)/libminiupnpc.a
+else
+	LIBS += -lminiupnpc
+endif
+endif
+
+all: neutrond
+
+# LevelDB library
+LIBS += $(CURDIR)/leveldb/build/libleveldb.a
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+OBJS += obj/txdb-leveldb.o
+leveldb/build/libleveldb.a:
+	@echo "Building LevelDB..." && cd leveldb && mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build . && cd ..
+obj/txdb-leveldb.o: leveldb/build/libleveldb.a
+
+# UniValue library
+LIBS += -L$(CURDIR)/univalue
+DEFS += $(addprefix -I,$(CURDIR)/univalue/include)
+OBJS += univalue/lib/libunivalue_la-univalue.o univalue/lib/libunivalue_la-univalue_get.o univalue/lib/libunivalue_la-univalue_read.o univalue/lib/libunivalue_la-univalue_write.o
+univalue/libunivalue.la:
+	@echo "Building UniValue ..." && cd univalue && ./autogen.sh && ./configure && $(MAKE) CC=$(CC) CXX=$(CXX) OPT="$(CFLAGS)" && cd ..
+univalue/lib/libunivalue_la-univalue.o: univalue/libunivalue.la
+
+# RPC commands
+OBJS += rpc/rpcmasternode.o
+rpc/rpcmasternode.o: rpc/rpcmasternode.cpp
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
+
+# Scripts
+OBJS += script/standard.o
+script/standard.o: script/standard.cpp
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
+
+# auto-generated dependencies:
+-include obj/*.P
+
+obj/build.h: FORCE
+	/bin/sh ../share/genbuild.sh obj/build.h
+clientversion.cpp: obj/build.h
+DEFS += -DHAVE_BUILD_INFO
+
+obj/%.o: %.cpp
+	$(CXX) -c $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+	  rm -f $(@:%.o=%.d)
+
+obj/scrypt-x86.o: scrypt-x86.S
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
+
+obj/scrypt-x86_64.o: scrypt-x86_64.S
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
+
+obj/scrypt-arm.o: scrypt-arm.S
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
+
+neutrond: $(OBJS:obj/%=obj/%)
+	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+
+clean:
+	-rm -f neutrond
+	-rm -f obj/*.o
+	-rm -f obj/*.P
+	-rm -f obj/build.h
+	cd leveldb && $(MAKE) clean && cd ..
+	cd univalue && $(MAKE) clean && cd ..
+
+FORCE:
